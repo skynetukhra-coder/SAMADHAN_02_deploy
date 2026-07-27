@@ -24,13 +24,21 @@ app.use('/api/tokens', tokenRoutes);
 app.use('/api/feedback', feedbackRoutes);
 
 const path = require('path');
+const fs = require('fs');
 
-// Serve static assets in production
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
+// Serve static assets in production (check local dist folder first, fallback to parent frontend/dist)
+const distPath = fs.existsSync(path.join(__dirname, 'dist'))
+  ? path.join(__dirname, 'dist')
+  : path.join(__dirname, '../frontend/dist');
+
+app.use(express.static(distPath));
 
 // Wildcard route to serve index.html for React routing
 app.get('*', (req, res) => {
-  res.sendFile(path.resolve(__dirname, '../frontend', 'dist', 'index.html'));
+  const indexPath = fs.existsSync(path.join(distPath, 'index.html'))
+    ? path.join(distPath, 'index.html')
+    : path.resolve(__dirname, '../frontend', 'dist', 'index.html');
+  res.sendFile(indexPath);
 });
 
 // Start Server
