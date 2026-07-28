@@ -92,6 +92,15 @@ async function initializeDb() {
       )
     `);
 
+    // 3.5 Create DDO Master Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS ddo_master (
+        PSA_CODE VARCHAR(50) PRIMARY KEY,
+        PSA_NAME VARCHAR(255) NOT NULL,
+        ADDRESS VARCHAR(255)
+      )
+    `);
+
     // Seed mock data for dashboard metrics and feedback table
     const [existingTokens] = await conn.query('SELECT COUNT(*) as count FROM tokens');
     if (existingTokens[0].count === 0) {

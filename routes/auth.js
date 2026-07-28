@@ -15,47 +15,25 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    // 1. Find the DDO in the details table by PSA_NAME
-    const [ddoCheck] = await db.query('SELECT TOKEN_NO, REPRESENTATIVE_NAME FROM details WHERE PSA_NAME = ?', [psa_ddo]);
-    
-    let tokenNo;
     const servicesArr = Array.isArray(services) ? services : [];
     const hasPension = servicesArr.includes('PENSION') ? 'Pending' : null;
     const hasAccounts = servicesArr.includes('ACCOUNTS') ? 'Pending' : null;
     const hasGpf = servicesArr.includes('GPF') ? 'Pending' : null;
 
-    // Check if there is an unused pre-populated row for this DDO
-    const freeRow = ddoCheck.find(r => r.REPRESENTATIVE_NAME === null);
-
-    if (ddoCheck.length === 0 || !freeRow) {
-      // DDO is new or all its existing rows are already registered: generate a new sequential token number (e.g. TKN201, TKN202...)
-      const [maxTokenRow] = await db.query("SELECT TOKEN_NO FROM details WHERE TOKEN_NO LIKE 'TKN%' ORDER BY CAST(SUBSTRING(TOKEN_NO, 4) AS UNSIGNED) DESC LIMIT 1");
-      let newTokenNo = 'TKN201';
-      if (maxTokenRow.length > 0) {
-        const lastNum = parseInt(maxTokenRow[0].TOKEN_NO.substring(3), 10);
-        newTokenNo = 'TKN' + String(lastNum + 1).padStart(3, '0');
-      }
-      tokenNo = newTokenNo;
-
-      // Insert new token row into details table
-      await db.query(
-        `INSERT INTO details (TOKEN_NO, PSA_NAME, PSA_CODE, ADDRESS, REPRESENTATIVE_NAME, MOBILE, EMAIL, SERVICE_PENSION, SERVICE_ACCOUNTS, SERVICE_GPF, STATUS) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
-        [tokenNo, psa_ddo, psa_ddo_code || null, address || null, rep_name, mobile, email, hasPension, hasAccounts, hasGpf]
-      );
-    } else {
-      tokenNo = freeRow.TOKEN_NO;
-
-      // Update the unused details table row
-      await db.query(
-        `UPDATE details 
-         SET REPRESENTATIVE_NAME = ?, MOBILE = ?, EMAIL = ?, 
-             SERVICE_PENSION = ?, SERVICE_ACCOUNTS = ?, SERVICE_GPF = ?, 
-             STATUS = 'Pending'
-         WHERE TOKEN_NO = ?`,
-        [rep_name, mobile, email, hasPension, hasAccounts, hasGpf, tokenNo]
-      );
+    // Generate a brand new sequential unique token number (e.g. TKN001, TKN002...)
+    const [maxTokenRow] = await db.query("SELECT TOKEN_NO FROM details WHERE TOKEN_NO LIKE 'TKN%' ORDER BY CAST(SUBSTRING(TOKEN_NO, 4) AS UNSIGNED) DESC LIMIT 1");
+    let tokenNo = 'TKN001';
+    if (maxTokenRow.length > 0) {
+      const lastNum = parseInt(maxTokenRow[0].TOKEN_NO.substring(3), 10);
+      tokenNo = 'TKN' + String(lastNum + 1).padStart(3, '0');
     }
+
+    // Insert new token row directly into details table
+    await db.query(
+      `INSERT INTO details (TOKEN_NO, PSA_NAME, PSA_CODE, ADDRESS, REPRESENTATIVE_NAME, MOBILE, EMAIL, SERVICE_PENSION, SERVICE_ACCOUNTS, SERVICE_GPF, STATUS) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
+      [tokenNo, psa_ddo, psa_ddo_code || null, address || null, rep_name, mobile, email, hasPension, hasAccounts, hasGpf]
+    );
 
     // 4. Also register them in users table for backwards compatibility
     const username = email.split('@')[0].split('.')[0].replace(/[^a-zA-Z0-9]/g, '');
@@ -135,7 +113,7 @@ router.post('/login', async (req, res) => {
 router.get('/ddos', async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT DISTINCT PSA_NAME, PSA_CODE, ADDRESS FROM details WHERE PSA_NAME IS NOT NULL AND PSA_NAME != "" ORDER BY PSA_NAME ASC'
+      'SELECT DISTINCT PSA_NAME, PSA_CODE, ADDRESS FROM ddo_master ORDER BY PSA_NAME ASC'
     );
     res.json(rows);
   } catch (err) {
