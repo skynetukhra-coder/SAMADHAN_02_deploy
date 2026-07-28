@@ -8,7 +8,9 @@ router.get('/', async (req, res) => {
     const [rows] = await db.query(
       `SELECT TOKEN_NO AS token_number, PSA_NAME AS psa_name FROM details 
        WHERE REPRESENTATIVE_NAME IS NOT NULL 
-         AND (SERVICE_PENSION = 'Completed' OR SERVICE_ACCOUNTS = 'Completed' OR SERVICE_GPF = 'Completed')
+         AND (SERVICE_PENSION IN ('Completed', 'Resolved') 
+           OR SERVICE_ACCOUNTS IN ('Completed', 'Resolved') 
+           OR SERVICE_GPF IN ('Completed', 'Resolved'))
          AND TOKEN_NO NOT IN (SELECT DISTINCT token_number FROM feedback)
        ORDER BY TOKEN_NO ASC`
     );
@@ -343,9 +345,9 @@ router.get('/:tokenNumber/details', async (req, res) => {
       email: row.EMAIL || '',
       address: row.ADDRESS || '',
       category: category,
-      hasPension: row.SERVICE_PENSION === 'Completed',
-      hasAccounts: row.SERVICE_ACCOUNTS === 'Completed',
-      hasGpf: row.SERVICE_GPF === 'Completed'
+      hasPension: ['Completed', 'Resolved'].includes(row.SERVICE_PENSION),
+      hasAccounts: ['Completed', 'Resolved'].includes(row.SERVICE_ACCOUNTS),
+      hasGpf: ['Completed', 'Resolved'].includes(row.SERVICE_GPF)
     });
   } catch (err) {
     console.error('Error fetching token details:', err);
