@@ -139,24 +139,55 @@ router.get('/in-progress', async (req, res) => {
         TOKEN_NO AS token_number,
         PSA_NAME AS psa_name,
         PSA_CODE AS psa_code,
-        CASE 
-          WHEN SERVICE_PENSION = 'In Progress' THEN TABLE_PENSION
-          WHEN SERVICE_ACCOUNTS = 'In Progress' THEN TABLE_ACCOUNTS
-          WHEN SERVICE_GPF = 'In Progress' THEN TABLE_GPF
-          ELSE COALESCE(TABLE_PENSION, TABLE_ACCOUNTS, TABLE_GPF)
-        END AS table_no,
-        CASE 
-          WHEN SERVICE_PENSION = 'In Progress' THEN 'Pension'
-          WHEN SERVICE_ACCOUNTS = 'In Progress' THEN 'Accounts'
-          WHEN SERVICE_GPF = 'In Progress' THEN 'GPF'
-          ELSE 'General'
-        END AS department
+        SERVICE_PENSION,
+        SERVICE_ACCOUNTS,
+        SERVICE_GPF,
+        TABLE_PENSION,
+        TABLE_ACCOUNTS,
+        TABLE_GPF
       FROM details
       WHERE REPRESENTATIVE_NAME IS NOT NULL 
-        AND (SERVICE_PENSION = 'In Progress' OR SERVICE_ACCOUNTS = 'In Progress' OR SERVICE_GPF = 'In Progress')
+        AND (
+          SERVICE_PENSION IN ('Pending', 'In Progress') OR 
+          SERVICE_ACCOUNTS IN ('Pending', 'In Progress') OR 
+          SERVICE_GPF IN ('Pending', 'In Progress')
+        )
       ORDER BY TOKEN_NO ASC
     `);
-    res.json(rows);
+
+    const formattedRows = rows.map(row => {
+      const departments = [];
+      const tables = [];
+
+      if (row.SERVICE_PENSION === 'Pending' || row.SERVICE_PENSION === 'In Progress') {
+        departments.push('Pension');
+        tables.push(row.TABLE_PENSION || 'Not Assigned');
+      }
+      if (row.SERVICE_ACCOUNTS === 'Pending' || row.SERVICE_ACCOUNTS === 'In Progress') {
+        departments.push('Accounts');
+        tables.push(row.TABLE_ACCOUNTS || 'Not Assigned');
+      }
+      if (row.SERVICE_GPF === 'Pending' || row.SERVICE_GPF === 'In Progress') {
+        departments.push('GPF');
+        tables.push(row.TABLE_GPF || 'Not Assigned');
+      }
+
+      // If all active tables are "Not Assigned", show it once instead of "Not Assigned, Not Assigned"
+      const uniqueTables = [...new Set(tables)];
+      const tableStr = (uniqueTables.length === 1 && uniqueTables[0] === 'Not Assigned')
+        ? 'Not Assigned'
+        : tables.join(', ');
+
+      return {
+        token_number: row.token_number,
+        psa_name: row.psa_name,
+        psa_code: row.psa_code,
+        department: departments.join(', '),
+        table_no: tableStr
+      };
+    });
+
+    res.json(formattedRows);
   } catch (err) {
     console.error('Error fetching in-progress tokens:', err);
     res.status(500).json({ error: 'Database error' });
