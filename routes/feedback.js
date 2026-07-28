@@ -21,19 +21,28 @@ router.post('/', async (req, res) => {
     // Update status in details table
     await db.query(
       `UPDATE details 
-       SET SERVICE_PENSION = CASE WHEN SERVICE_PENSION IS NOT NULL THEN 'Resolved' ELSE NULL END,
-           SERVICE_ACCOUNTS = CASE WHEN SERVICE_ACCOUNTS IS NOT NULL THEN 'Resolved' ELSE NULL END,
-           SERVICE_GPF = CASE WHEN SERVICE_GPF IS NOT NULL THEN 'Resolved' ELSE NULL END,
-           STATUS = 'Resolved'
+       SET SERVICE_PENSION = CASE WHEN SERVICE_PENSION = 'Completed' THEN 'Resolved' ELSE SERVICE_PENSION END,
+           SERVICE_ACCOUNTS = CASE WHEN SERVICE_ACCOUNTS = 'Completed' THEN 'Resolved' ELSE SERVICE_ACCOUNTS END,
+           SERVICE_GPF = CASE WHEN SERVICE_GPF = 'Completed' THEN 'Resolved' ELSE SERVICE_GPF END,
+           STATUS = CASE 
+             WHEN (SERVICE_PENSION IS NULL OR SERVICE_PENSION IN ('Completed', 'Resolved'))
+              AND (SERVICE_ACCOUNTS IS NULL OR SERVICE_ACCOUNTS IN ('Completed', 'Resolved'))
+              AND (SERVICE_GPF IS NULL OR SERVICE_GPF IN ('Completed', 'Resolved'))
+             THEN 'Resolved'
+             ELSE STATUS
+           END
        WHERE TOKEN_NO = ?`,
       [token_number]
     );
 
-    // Update token status to 'Resolved' (or 'Closed' if preferred)
-    await db.query(
-      "UPDATE tokens SET status = 'Resolved' WHERE token_number = ?",
-      [token_number]
-    );
+    // Update tokens table status if overall details status becomes 'Resolved'
+    const [statusRows] = await db.query('SELECT STATUS FROM details WHERE TOKEN_NO = ?', [token_number]);
+    if (statusRows.length > 0 && statusRows[0].STATUS === 'Resolved') {
+      await db.query(
+        "UPDATE tokens SET status = 'Resolved' WHERE token_number = ?",
+        [token_number]
+      );
+    }
 
     res.status(201).json({ message: 'Feedback submitted successfully' });
   } catch (err) {
