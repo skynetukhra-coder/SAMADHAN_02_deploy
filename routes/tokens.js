@@ -79,7 +79,7 @@ router.get('/active-list', async (req, res) => {
 
 // 3. ALLOCATE TABLE
 router.post('/allocate', async (req, res) => {
-  const { token_number, category, allocated_table, remarks } = req.body;
+  const { token_number, category, allocated_table, remarks, bo_name } = req.body;
 
   if (!token_number || !allocated_table || !category) {
     return res.status(400).json({ error: 'Token number, category, and table allocation are required' });
@@ -91,14 +91,14 @@ router.post('/allocate', async (req, res) => {
 
     const normalizedCat = category.toLowerCase();
     if (normalizedCat === 'pension') {
-      query = "UPDATE details SET TABLE_PENSION = ?, REMARKS_PENSION = ?, SERVICE_PENSION = 'In Progress', STATUS = 'In Progress' WHERE TOKEN_NO = ?";
-      params = [allocated_table, remarks || '', token_number];
+      query = "UPDATE details SET TABLE_PENSION = ?, REMARKS_PENSION = ?, SERVICE_PENSION = 'In Progress', STATUS = 'In Progress', BO_PENSION = ?, ALLOCATED_AT_PENSION = NOW() WHERE TOKEN_NO = ?";
+      params = [allocated_table, remarks || '', bo_name || 'System BO', token_number];
     } else if (normalizedCat === 'accounts') {
-      query = "UPDATE details SET TABLE_ACCOUNTS = ?, REMARKS_ACCOUNTS = ?, SERVICE_ACCOUNTS = 'In Progress', STATUS = 'In Progress' WHERE TOKEN_NO = ?";
-      params = [allocated_table, remarks || '', token_number];
+      query = "UPDATE details SET TABLE_ACCOUNTS = ?, REMARKS_ACCOUNTS = ?, SERVICE_ACCOUNTS = 'In Progress', STATUS = 'In Progress', BO_ACCOUNTS = ?, ALLOCATED_AT_ACCOUNTS = NOW() WHERE TOKEN_NO = ?";
+      params = [allocated_table, remarks || '', bo_name || 'System BO', token_number];
     } else if (normalizedCat === 'gpf') {
-      query = "UPDATE details SET TABLE_GPF = ?, REMARKS_GPF = ?, SERVICE_GPF = 'In Progress', STATUS = 'In Progress' WHERE TOKEN_NO = ?";
-      params = [allocated_table, remarks || '', token_number];
+      query = "UPDATE details SET TABLE_GPF = ?, REMARKS_GPF = ?, SERVICE_GPF = 'In Progress', STATUS = 'In Progress', BO_GPF = ?, ALLOCATED_AT_GPF = NOW() WHERE TOKEN_NO = ?";
+      params = [allocated_table, remarks || '', bo_name || 'System BO', token_number];
     } else {
       return res.status(400).json({ error: 'Invalid service category' });
     }
@@ -190,6 +190,51 @@ router.get('/in-progress', async (req, res) => {
     res.json(formattedRows);
   } catch (err) {
     console.error('Error fetching in-progress tokens:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// 3.6 GET ALL TOKENS WITH AUDIT DETAILS FOR ADMIN DASHBOARD
+router.get('/admin-list', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        TOKEN_NO AS token_number,
+        PSA_NAME AS psa_name,
+        PSA_CODE AS psa_code,
+        ADDRESS AS address,
+        REPRESENTATIVE_NAME AS rep_name,
+        MOBILE AS mobile,
+        EMAIL AS email,
+        SERVICE_PENSION,
+        SERVICE_ACCOUNTS,
+        SERVICE_GPF,
+        TABLE_PENSION,
+        TABLE_ACCOUNTS,
+        TABLE_GPF,
+        REMARKS_PENSION,
+        REMARKS_ACCOUNTS,
+        REMARKS_GPF,
+        STATUS AS status,
+        CREATED_AT,
+        BO_PENSION,
+        ALLOCATED_AT_PENSION,
+        BO_ACCOUNTS,
+        ALLOCATED_AT_ACCOUNTS,
+        BO_GPF,
+        ALLOCATED_AT_GPF,
+        AAO_PENSION,
+        COMPLETED_AT_PENSION,
+        AAO_ACCOUNTS,
+        COMPLETED_AT_ACCOUNTS,
+        AAO_GPF,
+        COMPLETED_AT_GPF
+      FROM details
+      ORDER BY CREATED_AT DESC, TOKEN_NO DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching admin list:', err);
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -306,7 +351,7 @@ router.get('/table/:tableNumber', async (req, res) => {
 
 // 6. UPDATE TOKEN STATUS AND REMARKS
 router.post('/update-status', async (req, res) => {
-  const { token_number, status, remarks, group_name } = req.body;
+  const { token_number, status, remarks, group_name, aao_name } = req.body;
 
   if (!token_number || !status) {
     return res.status(400).json({ error: 'Token number and status are required' });
@@ -316,16 +361,32 @@ router.post('/update-status', async (req, res) => {
     const normalizedGroup = (group_name || '').toUpperCase();
     let query = '';
     let params = [];
+    const isCompleted = (status === 'Resolved' || status === 'Completed');
 
     if (normalizedGroup === 'PENSION' || normalizedGroup === 'ADMINISTRATION') {
-      query = 'UPDATE details SET SERVICE_PENSION = ?, REMARKS_PENSION = ? WHERE TOKEN_NO = ?';
-      params = [status, remarks || '', token_number];
+      query = `
+        UPDATE details 
+        SET SERVICE_PENSION = ?, REMARKS_PENSION = ?, AAO_PENSION = ?
+            ${isCompleted ? ', COMPLETED_AT_PENSION = NOW()' : ''}
+        WHERE TOKEN_NO = ?
+      `;
+      params = [status, remarks || '', aao_name || 'System AAO', token_number];
     } else if (normalizedGroup === 'ACCOUNTS') {
-      query = 'UPDATE details SET SERVICE_ACCOUNTS = ?, REMARKS_ACCOUNTS = ? WHERE TOKEN_NO = ?';
-      params = [status, remarks || '', token_number];
+      query = `
+        UPDATE details 
+        SET SERVICE_ACCOUNTS = ?, REMARKS_ACCOUNTS = ?, AAO_ACCOUNTS = ?
+            ${isCompleted ? ', COMPLETED_AT_ACCOUNTS = NOW()' : ''}
+        WHERE TOKEN_NO = ?
+      `;
+      params = [status, remarks || '', aao_name || 'System AAO', token_number];
     } else if (normalizedGroup === 'FUND') {
-      query = 'UPDATE details SET SERVICE_GPF = ?, REMARKS_GPF = ? WHERE TOKEN_NO = ?';
-      params = [status, remarks || '', token_number];
+      query = `
+        UPDATE details 
+        SET SERVICE_GPF = ?, REMARKS_GPF = ?, AAO_GPF = ?
+            ${isCompleted ? ', COMPLETED_AT_GPF = NOW()' : ''}
+        WHERE TOKEN_NO = ?
+      `;
+      params = [status, remarks || '', aao_name || 'System AAO', token_number];
     } else {
       query = 'UPDATE tokens SET status = ?, remarks = ? WHERE token_number = ?';
       params = [status, remarks || '', token_number];
