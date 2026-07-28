@@ -150,6 +150,7 @@ router.get('/list', async (req, res) => {
   const { group_name } = req.query;
   const normalizedGroup = (group_name || '').trim().toUpperCase();
 
+  try {
     let feedbackFilter = '';
     if (normalizedGroup.includes('PENSION')) {
       feedbackFilter = 'WHERE d.SERVICE_PENSION IS NOT NULL';
