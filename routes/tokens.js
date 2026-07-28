@@ -131,6 +131,38 @@ router.post('/allocate', async (req, res) => {
   }
 });
 
+// 3.5 GET ALL IN-PROGRESS TOKENS FOR LIVE DISPLAY BOARD
+router.get('/in-progress', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        TOKEN_NO AS token_number,
+        PSA_NAME AS psa_name,
+        PSA_CODE AS psa_code,
+        CASE 
+          WHEN SERVICE_PENSION = 'In Progress' THEN TABLE_PENSION
+          WHEN SERVICE_ACCOUNTS = 'In Progress' THEN TABLE_ACCOUNTS
+          WHEN SERVICE_GPF = 'In Progress' THEN TABLE_GPF
+          ELSE COALESCE(TABLE_PENSION, TABLE_ACCOUNTS, TABLE_GPF)
+        END AS table_no,
+        CASE 
+          WHEN SERVICE_PENSION = 'In Progress' THEN 'Pension'
+          WHEN SERVICE_ACCOUNTS = 'In Progress' THEN 'Accounts'
+          WHEN SERVICE_GPF = 'In Progress' THEN 'GPF'
+          ELSE 'General'
+        END AS department
+      FROM details
+      WHERE REPRESENTATIVE_NAME IS NOT NULL 
+        AND (SERVICE_PENSION = 'In Progress' OR SERVICE_ACCOUNTS = 'In Progress' OR SERVICE_GPF = 'In Progress')
+      ORDER BY TOKEN_NO ASC
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching in-progress tokens:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // 4. GET AUTO-FETCHED DETAILS FOR FEEDBACK FORM
 router.get('/:tokenNumber/details', async (req, res) => {
   const { tokenNumber } = req.params;
