@@ -85,18 +85,32 @@ router.get('/stats', async (req, res) => {
     const [resolvedRow] = await db.query(resolvedQuery);
     const [totalFeedbackRow] = await db.query('SELECT COUNT(*) as count FROM feedback');
 
-    // Fetch recent feedbacks joined with token info
+    // Fetch recent feedbacks joined with details for category and remarks info
     const [recentFeedbacks] = await db.query(`
       SELECT 
         f.token_number, 
-        'Pension' as category, 
+        CASE 
+          WHEN d.SERVICE_PENSION IS NOT NULL THEN 'Pension'
+          WHEN d.SERVICE_ACCOUNTS IS NOT NULL THEN 'Accounts'
+          ELSE 'GPF'
+        END as category, 
         f.submitted_on, 
         f.comments as feedback, 
+        COALESCE(
+          CASE 
+            WHEN ? = 'PENSION' OR ? = 'ADMINISTRATION' THEN d.REMARKS_PENSION
+            WHEN ? = 'ACCOUNTS' THEN d.REMARKS_ACCOUNTS
+            WHEN ? = 'FUND' THEN d.REMARKS_GPF
+            ELSE COALESCE(d.REMARKS_PENSION, d.REMARKS_ACCOUNTS, d.REMARKS_GPF)
+          END,
+          ''
+        ) as remarks,
         'Completed' as status 
       FROM feedback f
+      LEFT JOIN details d ON f.token_number = d.TOKEN_NO
       ORDER BY f.submitted_on DESC
       LIMIT 10
-    `);
+    `, [group_name, group_name, group_name, group_name, group_name, group_name]);
 
     // In case MySQL has no data yet (or not connected), we provide mockup-matching fallback values
     const responseData = {
@@ -176,6 +190,42 @@ router.get('/stats', async (req, res) => {
         }
       ]
     });
+  }
+});
+
+// 3. GET ALL DETAILED FEEDBACKS
+router.get('/list', async (req, res) => {
+  const { group_name } = req.query;
+
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        f.token_number, 
+        CASE 
+          WHEN d.SERVICE_PENSION IS NOT NULL THEN 'Pension'
+          WHEN d.SERVICE_ACCOUNTS IS NOT NULL THEN 'Accounts'
+          ELSE 'GPF'
+        END as category, 
+        f.submitted_on, 
+        f.comments as feedback, 
+        COALESCE(
+          CASE 
+            WHEN ? = 'PENSION' OR ? = 'ADMINISTRATION' THEN d.REMARKS_PENSION
+            WHEN ? = 'ACCOUNTS' THEN d.REMARKS_ACCOUNTS
+            WHEN ? = 'FUND' THEN d.REMARKS_GPF
+            ELSE COALESCE(d.REMARKS_PENSION, d.REMARKS_ACCOUNTS, d.REMARKS_GPF)
+          END,
+          ''
+        ) as remarks,
+        'Completed' as status 
+      FROM feedback f
+      LEFT JOIN details d ON f.token_number = d.TOKEN_NO
+      ORDER BY f.submitted_on DESC
+    `, [group_name, group_name, group_name, group_name, group_name, group_name]);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching feedbacks list:', err);
+    res.status(500).json({ error: 'Database error' });
   }
 });
 

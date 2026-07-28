@@ -52,19 +52,19 @@ router.get('/active-list', async (req, res) => {
     let query = '';
 
     if (group_name === 'PENSION' || group_name === 'ADMINISTRATION') {
-      query = `SELECT TOKEN_NO AS token_number, 'Pension' AS category FROM details WHERE SERVICE_PENSION = 'Pending' AND TABLE_PENSION IS NULL`;
+      query = `SELECT TOKEN_NO AS token_number, 'Pension' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_PENSION = 'Pending' AND TABLE_PENSION IS NULL`;
     } else if (group_name === 'ACCOUNTS') {
-      query = `SELECT TOKEN_NO AS token_number, 'Accounts' AS category FROM details WHERE SERVICE_ACCOUNTS = 'Pending' AND TABLE_ACCOUNTS IS NULL`;
+      query = `SELECT TOKEN_NO AS token_number, 'Accounts' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_ACCOUNTS = 'Pending' AND TABLE_ACCOUNTS IS NULL`;
     } else if (group_name === 'FUND') {
-      query = `SELECT TOKEN_NO AS token_number, 'GPF' AS category FROM details WHERE SERVICE_GPF = 'Pending' AND TABLE_GPF IS NULL`;
+      query = `SELECT TOKEN_NO AS token_number, 'GPF' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_GPF = 'Pending' AND TABLE_GPF IS NULL`;
     } else {
       // Fallback/all if no specific group_name is passed
       query = `
-        SELECT TOKEN_NO AS token_number, 'Pension' AS category FROM details WHERE SERVICE_PENSION = 'Pending' AND TABLE_PENSION IS NULL
+        SELECT TOKEN_NO AS token_number, 'Pension' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_PENSION = 'Pending' AND TABLE_PENSION IS NULL
         UNION ALL
-        SELECT TOKEN_NO AS token_number, 'Accounts' AS category FROM details WHERE SERVICE_ACCOUNTS = 'Pending' AND TABLE_ACCOUNTS IS NULL
+        SELECT TOKEN_NO AS token_number, 'Accounts' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_ACCOUNTS = 'Pending' AND TABLE_ACCOUNTS IS NULL
         UNION ALL
-        SELECT TOKEN_NO AS token_number, 'GPF' AS category FROM details WHERE SERVICE_GPF = 'Pending' AND TABLE_GPF IS NULL
+        SELECT TOKEN_NO AS token_number, 'GPF' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_GPF = 'Pending' AND TABLE_GPF IS NULL
       `;
     }
 
