@@ -8,6 +8,8 @@ router.get('/', async (req, res) => {
     const [rows] = await db.query(
       `SELECT TOKEN_NO AS token_number, PSA_NAME AS psa_name FROM details 
        WHERE REPRESENTATIVE_NAME IS NOT NULL 
+         AND STATUS = 'Completed'
+         AND TOKEN_NO NOT IN (SELECT DISTINCT token_number FROM feedback)
        ORDER BY TOKEN_NO ASC`
     );
     res.json(rows);
