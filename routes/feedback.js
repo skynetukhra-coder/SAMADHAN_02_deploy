@@ -113,83 +113,24 @@ router.get('/stats', async (req, res) => {
       LIMIT 10
     `, [normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup]);
 
-    // In case MySQL has no data yet (or not connected), we provide mockup-matching fallback values
+    // Clear all offline mock/sample fallback data, returning only actual database values
     const responseData = {
-      totalTokens: totalTokensRow[0]?.count || 18,
-      inProgress: inProgressRow[0]?.count || 6,
-      resolved: resolvedRow[0]?.count || 9,
-      totalFeedback: totalFeedbackRow[0]?.count || 24,
-      recentFeedback: recentFeedbacks.length > 0 ? recentFeedbacks : [
-        {
-          token_number: 'TK2024-00125',
-          category: 'Pension',
-          submitted_on: '2024-05-20T10:45:00.000Z',
-          feedback: 'The staff was helpful and the process was smooth.',
-          status: 'In Progress'
-        },
-        {
-          token_number: 'TK2024-00118',
-          category: 'Accounts',
-          submitted_on: '2024-05-18T14:30:00.000Z',
-          feedback: 'Quick response and issue resolved successfully.',
-          status: 'Resolved'
-        },
-        {
-          token_number: 'TK2024-00110',
-          category: 'GPF',
-          submitted_on: '2024-05-15T11:20:00.000Z',
-          feedback: 'Information provided was clear and accurate.',
-          status: 'Resolved'
-        },
-        {
-          token_number: 'TK2024-00098',
-          category: 'Pension',
-          submitted_on: '2024-05-10T09:15:00.000Z',
-          feedback: 'Need more counters during peak hours.',
-          status: 'Closed'
-        }
-      ]
+      totalTokens: totalTokensRow[0]?.count || 0,
+      inProgress: inProgressRow[0]?.count || 0,
+      resolved: resolvedRow[0]?.count || 0,
+      totalFeedback: totalFeedbackRow[0]?.count || 0,
+      recentFeedback: recentFeedbacks
     };
 
     res.json(responseData);
   } catch (err) {
     console.error('Error fetching dashboard statistics:', err);
-    // Graceful offline fallback in case database connection failed
-    res.json({
-      totalTokens: 18,
-      inProgress: 6,
-      resolved: 9,
-      totalFeedback: 24,
-      recentFeedback: [
-        {
-          token_number: 'TK2024-00125',
-          category: 'Pension',
-          submitted_on: '2024-05-20T10:45:00.000Z',
-          feedback: 'The staff was helpful and the process was smooth.',
-          status: 'In Progress'
-        },
-        {
-          token_number: 'TK2024-00118',
-          category: 'Accounts',
-          submitted_on: '2024-05-18T14:30:00.000Z',
-          feedback: 'Quick response and issue resolved successfully.',
-          status: 'Resolved'
-        },
-        {
-          token_number: 'TK2024-00110',
-          category: 'GPF',
-          submitted_on: '2024-05-15T11:20:00.000Z',
-          feedback: 'Information provided was clear and accurate.',
-          status: 'Resolved'
-        },
-        {
-          token_number: 'TK2024-00098',
-          category: 'Pension',
-          submitted_on: '2024-05-10T09:15:00.000Z',
-          feedback: 'Need more counters during peak hours.',
-          status: 'Closed'
-        }
-      ]
+    res.status(500).json({
+      totalTokens: 0,
+      inProgress: 0,
+      resolved: 0,
+      totalFeedback: 0,
+      recentFeedback: []
     });
   }
 });
