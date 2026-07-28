@@ -86,7 +86,16 @@ router.get('/stats', async (req, res) => {
     const [resolvedRow] = await db.query(resolvedQuery);
     const [totalFeedbackRow] = await db.query('SELECT COUNT(*) as count FROM feedback');
 
-    // Fetch recent feedbacks joined with details for category and remarks info
+    // Fetch only feedbacks where the specific service concerned is selected
+    let feedbackFilter = '';
+    if (normalizedGroup.includes('PENSION')) {
+      feedbackFilter = 'WHERE d.SERVICE_PENSION IS NOT NULL';
+    } else if (normalizedGroup.includes('ACCOUNTS')) {
+      feedbackFilter = 'WHERE d.SERVICE_ACCOUNTS IS NOT NULL';
+    } else if (normalizedGroup.includes('FUND') || normalizedGroup.includes('GPF')) {
+      feedbackFilter = 'WHERE d.SERVICE_GPF IS NOT NULL';
+    }
+
     const [recentFeedbacks] = await db.query(`
       SELECT 
         f.token_number, 
@@ -109,6 +118,7 @@ router.get('/stats', async (req, res) => {
         'Completed' as status 
       FROM feedback f
       LEFT JOIN details d ON f.token_number = d.TOKEN_NO
+      ${feedbackFilter}
       ORDER BY f.submitted_on DESC
       LIMIT 10
     `, [normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup]);
@@ -140,7 +150,15 @@ router.get('/list', async (req, res) => {
   const { group_name } = req.query;
   const normalizedGroup = (group_name || '').trim().toUpperCase();
 
-  try {
+    let feedbackFilter = '';
+    if (normalizedGroup.includes('PENSION')) {
+      feedbackFilter = 'WHERE d.SERVICE_PENSION IS NOT NULL';
+    } else if (normalizedGroup.includes('ACCOUNTS')) {
+      feedbackFilter = 'WHERE d.SERVICE_ACCOUNTS IS NOT NULL';
+    } else if (normalizedGroup.includes('FUND') || normalizedGroup.includes('GPF')) {
+      feedbackFilter = 'WHERE d.SERVICE_GPF IS NOT NULL';
+    }
+
     const [rows] = await db.query(`
       SELECT 
         f.token_number, 
@@ -163,6 +181,7 @@ router.get('/list', async (req, res) => {
         'Completed' as status 
       FROM feedback f
       LEFT JOIN details d ON f.token_number = d.TOKEN_NO
+      ${feedbackFilter}
       ORDER BY f.submitted_on DESC
     `, [normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup]);
     res.json(rows);

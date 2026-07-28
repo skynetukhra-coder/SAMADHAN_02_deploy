@@ -239,6 +239,85 @@ router.get('/admin-list', async (req, res) => {
   }
 });
 
+// 3.8 GET ALL ASSIGNED TOKENS FOR BO DASHBOARD REALTIME TRACKING
+router.get('/assigned-list', async (req, res) => {
+  const { group_name } = req.query;
+  const normalizedGroup = (group_name || '').toUpperCase();
+
+  try {
+    let query = '';
+    let params = [];
+
+    if (normalizedGroup.includes('PENSION') || normalizedGroup.includes('ADMINISTRATION')) {
+      query = `
+        SELECT 
+          TOKEN_NO AS token_number,
+          PSA_NAME AS psa_name,
+          PSA_CODE AS psa_code,
+          TABLE_PENSION AS table_no,
+          SERVICE_PENSION AS status,
+          BO_PENSION AS bo_name,
+          ALLOCATED_AT_PENSION AS allocated_at,
+          AAO_PENSION AS aao_name,
+          REMARKS_PENSION AS remarks,
+          COMPLETED_AT_PENSION AS completed_at
+        FROM details
+        WHERE TABLE_PENSION IS NOT NULL
+        ORDER BY ALLOCATED_AT_PENSION DESC
+      `;
+    } else if (normalizedGroup.includes('ACCOUNTS')) {
+      query = `
+        SELECT 
+          TOKEN_NO AS token_number,
+          PSA_NAME AS psa_name,
+          PSA_CODE AS psa_code,
+          TABLE_ACCOUNTS AS table_no,
+          SERVICE_ACCOUNTS AS status,
+          BO_ACCOUNTS AS bo_name,
+          ALLOCATED_AT_ACCOUNTS AS allocated_at,
+          AAO_ACCOUNTS AS aao_name,
+          REMARKS_ACCOUNTS AS remarks,
+          COMPLETED_AT_ACCOUNTS AS completed_at
+        FROM details
+        WHERE TABLE_ACCOUNTS IS NOT NULL
+        ORDER BY ALLOCATED_AT_ACCOUNTS DESC
+      `;
+    } else if (normalizedGroup.includes('FUND') || normalizedGroup.includes('GPF')) {
+      query = `
+        SELECT 
+          TOKEN_NO AS token_number,
+          PSA_NAME AS psa_name,
+          PSA_CODE AS psa_code,
+          TABLE_GPF AS table_no,
+          SERVICE_GPF AS status,
+          BO_GPF AS bo_name,
+          ALLOCATED_AT_GPF AS allocated_at,
+          AAO_GPF AS aao_name,
+          REMARKS_GPF AS remarks,
+          COMPLETED_AT_GPF AS completed_at
+        FROM details
+        WHERE TABLE_GPF IS NOT NULL
+        ORDER BY ALLOCATED_AT_GPF DESC
+      `;
+    } else {
+      // Default fallback
+      query = `
+        SELECT TOKEN_NO AS token_number, PSA_NAME AS psa_name, PSA_CODE AS psa_code, TABLE_PENSION AS table_no, SERVICE_PENSION AS status, BO_PENSION AS bo_name, ALLOCATED_AT_PENSION AS allocated_at, AAO_PENSION AS aao_name, REMARKS_PENSION AS remarks, COMPLETED_AT_PENSION AS completed_at FROM details WHERE TABLE_PENSION IS NOT NULL
+        UNION ALL
+        SELECT TOKEN_NO AS token_number, PSA_NAME AS psa_name, PSA_CODE AS psa_code, TABLE_ACCOUNTS AS table_no, SERVICE_ACCOUNTS AS status, BO_ACCOUNTS AS bo_name, ALLOCATED_AT_ACCOUNTS AS allocated_at, AAO_ACCOUNTS AS aao_name, REMARKS_ACCOUNTS AS remarks, COMPLETED_AT_ACCOUNTS AS completed_at FROM details WHERE TABLE_ACCOUNTS IS NOT NULL
+        UNION ALL
+        SELECT TOKEN_NO AS token_number, PSA_NAME AS psa_name, PSA_CODE AS psa_code, TABLE_GPF AS table_no, SERVICE_GPF AS status, BO_GPF AS bo_name, ALLOCATED_AT_GPF AS allocated_at, AAO_GPF AS aao_name, REMARKS_GPF AS remarks, COMPLETED_AT_GPF AS completed_at FROM details WHERE TABLE_GPF IS NOT NULL
+      `;
+    }
+
+    const [rows] = await db.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching assigned tokens:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // 4. GET AUTO-FETCHED DETAILS FOR FEEDBACK FORM
 router.get('/:tokenNumber/details', async (req, res) => {
   const { tokenNumber } = req.params;
