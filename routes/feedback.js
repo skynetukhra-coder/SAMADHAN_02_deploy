@@ -45,6 +45,7 @@ router.post('/', async (req, res) => {
 // 2. GET DASHBOARD METRICS AND RECENT FEEDBACKS
 router.get('/stats', async (req, res) => {
   const { group_name } = req.query;
+  const normalizedGroup = (group_name || '').trim().toUpperCase();
 
   try {
     let totalQuery = `
@@ -66,15 +67,15 @@ router.get('/stats', async (req, res) => {
       ) as count
     `;
 
-    if (group_name === 'PENSION' || group_name === 'ADMINISTRATION') {
+    if (normalizedGroup.includes('PENSION') || normalizedGroup.includes('ADMINISTRATION')) {
       totalQuery = `SELECT COUNT(*) as count FROM details WHERE SERVICE_PENSION IS NOT NULL`;
       inProgressQuery = `SELECT COUNT(*) as count FROM details WHERE SERVICE_PENSION = 'In Progress'`;
       resolvedQuery = `SELECT COUNT(*) as count FROM details WHERE SERVICE_PENSION IN ('Resolved', 'Completed')`;
-    } else if (group_name === 'ACCOUNTS') {
+    } else if (normalizedGroup.includes('ACCOUNTS')) {
       totalQuery = `SELECT COUNT(*) as count FROM details WHERE SERVICE_ACCOUNTS IS NOT NULL`;
       inProgressQuery = `SELECT COUNT(*) as count FROM details WHERE SERVICE_ACCOUNTS = 'In Progress'`;
       resolvedQuery = `SELECT COUNT(*) as count FROM details WHERE SERVICE_ACCOUNTS IN ('Resolved', 'Completed')`;
-    } else if (group_name === 'FUND') {
+    } else if (normalizedGroup.includes('FUND') || normalizedGroup.includes('GPF')) {
       totalQuery = `SELECT COUNT(*) as count FROM details WHERE SERVICE_GPF IS NOT NULL`;
       inProgressQuery = `SELECT COUNT(*) as count FROM details WHERE SERVICE_GPF = 'In Progress'`;
       resolvedQuery = `SELECT COUNT(*) as count FROM details WHERE SERVICE_GPF IN ('Resolved', 'Completed')`;
@@ -98,9 +99,9 @@ router.get('/stats', async (req, res) => {
         f.comments as feedback, 
         COALESCE(
           CASE 
-            WHEN ? = 'PENSION' OR ? = 'ADMINISTRATION' THEN d.REMARKS_PENSION
-            WHEN ? = 'ACCOUNTS' THEN d.REMARKS_ACCOUNTS
-            WHEN ? = 'FUND' THEN d.REMARKS_GPF
+            WHEN ? LIKE '%PENSION%' OR ? LIKE '%ADMINISTRATION%' THEN d.REMARKS_PENSION
+            WHEN ? LIKE '%ACCOUNTS%' THEN d.REMARKS_ACCOUNTS
+            WHEN ? LIKE '%FUND%' OR ? LIKE '%GPF%' THEN d.REMARKS_GPF
             ELSE COALESCE(d.REMARKS_PENSION, d.REMARKS_ACCOUNTS, d.REMARKS_GPF)
           END,
           ''
@@ -110,7 +111,7 @@ router.get('/stats', async (req, res) => {
       LEFT JOIN details d ON f.token_number = d.TOKEN_NO
       ORDER BY f.submitted_on DESC
       LIMIT 10
-    `, [group_name, group_name, group_name, group_name, group_name, group_name]);
+    `, [normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup]);
 
     // In case MySQL has no data yet (or not connected), we provide mockup-matching fallback values
     const responseData = {
@@ -196,6 +197,7 @@ router.get('/stats', async (req, res) => {
 // 3. GET ALL DETAILED FEEDBACKS
 router.get('/list', async (req, res) => {
   const { group_name } = req.query;
+  const normalizedGroup = (group_name || '').trim().toUpperCase();
 
   try {
     const [rows] = await db.query(`
@@ -210,9 +212,9 @@ router.get('/list', async (req, res) => {
         f.comments as feedback, 
         COALESCE(
           CASE 
-            WHEN ? = 'PENSION' OR ? = 'ADMINISTRATION' THEN d.REMARKS_PENSION
-            WHEN ? = 'ACCOUNTS' THEN d.REMARKS_ACCOUNTS
-            WHEN ? = 'FUND' THEN d.REMARKS_GPF
+            WHEN ? LIKE '%PENSION%' OR ? LIKE '%ADMINISTRATION%' THEN d.REMARKS_PENSION
+            WHEN ? LIKE '%ACCOUNTS%' THEN d.REMARKS_ACCOUNTS
+            WHEN ? LIKE '%FUND%' OR ? LIKE '%GPF%' THEN d.REMARKS_GPF
             ELSE COALESCE(d.REMARKS_PENSION, d.REMARKS_ACCOUNTS, d.REMARKS_GPF)
           END,
           ''
@@ -221,7 +223,7 @@ router.get('/list', async (req, res) => {
       FROM feedback f
       LEFT JOIN details d ON f.token_number = d.TOKEN_NO
       ORDER BY f.submitted_on DESC
-    `, [group_name, group_name, group_name, group_name, group_name, group_name]);
+    `, [normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup, normalizedGroup]);
     res.json(rows);
   } catch (err) {
     console.error('Error fetching feedbacks list:', err);

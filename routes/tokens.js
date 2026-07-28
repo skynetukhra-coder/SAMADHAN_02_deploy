@@ -47,24 +47,25 @@ router.get('/by-psa', async (req, res) => {
 // 2. GET ACTIVE/ALLOCATABLE TOKENS (Pending status from details table, filtered by group_name)
 router.get('/active-list', async (req, res) => {
   const { group_name } = req.query;
+  const normalizedGroup = (group_name || '').trim().toUpperCase();
 
   try {
     let query = '';
 
-    if (group_name === 'PENSION' || group_name === 'ADMINISTRATION') {
-      query = `SELECT TOKEN_NO AS token_number, 'Pension' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_PENSION = 'Pending' AND TABLE_PENSION IS NULL`;
-    } else if (group_name === 'ACCOUNTS') {
-      query = `SELECT TOKEN_NO AS token_number, 'Accounts' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_ACCOUNTS = 'Pending' AND TABLE_ACCOUNTS IS NULL`;
-    } else if (group_name === 'FUND') {
-      query = `SELECT TOKEN_NO AS token_number, 'GPF' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_GPF = 'Pending' AND TABLE_GPF IS NULL`;
+    if (normalizedGroup.includes('PENSION') || normalizedGroup.includes('ADMINISTRATION')) {
+      query = `SELECT TOKEN_NO AS token_number, 'Pension' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_PENSION IS NOT NULL AND SERVICE_PENSION != 'Resolved' AND TABLE_PENSION IS NULL`;
+    } else if (normalizedGroup.includes('ACCOUNTS')) {
+      query = `SELECT TOKEN_NO AS token_number, 'Accounts' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_ACCOUNTS IS NOT NULL AND SERVICE_ACCOUNTS != 'Resolved' AND TABLE_ACCOUNTS IS NULL`;
+    } else if (normalizedGroup.includes('FUND') || normalizedGroup.includes('GPF')) {
+      query = `SELECT TOKEN_NO AS token_number, 'GPF' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_GPF IS NOT NULL AND SERVICE_GPF != 'Resolved' AND TABLE_GPF IS NULL`;
     } else {
-      // Fallback/all if no specific group_name is passed
+      // Fallback/all if no specific group_name is passed or recognized
       query = `
-        SELECT TOKEN_NO AS token_number, 'Pension' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_PENSION = 'Pending' AND TABLE_PENSION IS NULL
+        SELECT TOKEN_NO AS token_number, 'Pension' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_PENSION IS NOT NULL AND SERVICE_PENSION != 'Resolved' AND TABLE_PENSION IS NULL
         UNION ALL
-        SELECT TOKEN_NO AS token_number, 'Accounts' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_ACCOUNTS = 'Pending' AND TABLE_ACCOUNTS IS NULL
+        SELECT TOKEN_NO AS token_number, 'Accounts' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_ACCOUNTS IS NOT NULL AND SERVICE_ACCOUNTS != 'Resolved' AND TABLE_ACCOUNTS IS NULL
         UNION ALL
-        SELECT TOKEN_NO AS token_number, 'GPF' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_GPF = 'Pending' AND TABLE_GPF IS NULL
+        SELECT TOKEN_NO AS token_number, 'GPF' AS category, PSA_NAME AS psa_name FROM details WHERE SERVICE_GPF IS NOT NULL AND SERVICE_GPF != 'Resolved' AND TABLE_GPF IS NULL
       `;
     }
 
