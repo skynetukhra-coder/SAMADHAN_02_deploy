@@ -35,24 +35,6 @@ router.post('/register', async (req, res) => {
       [tokenNo, psa_ddo, psa_ddo_code || null, address || null, rep_name, mobile, email, hasPension, hasAccounts, hasGpf]
     );
 
-    // 4. Also register them in users table for backwards compatibility
-    const username = email.split('@')[0].split('.')[0].replace(/[^a-zA-Z0-9]/g, '');
-    let group_name = 'ADMINISTRATION';
-    if (servicesArr.includes('ACCOUNTS')) {
-      group_name = 'ACCOUNTS';
-    } else if (servicesArr.includes('GPF')) {
-      group_name = 'FUND';
-    }
-
-    const [existing] = await db.query('SELECT user_id FROM users WHERE email = ? OR username = ?', [email, username]);
-    if (existing.length === 0) {
-      await db.query(
-        `INSERT INTO users (username, password, full_name, designation, group_name, email, psa_ddo, psa_ddo_code, address) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [username, mobile, rep_name, designation || 'Sr. Accounts Officer', group_name, email, psa_ddo || null, psa_ddo_code || null, address || null]
-      );
-    }
-
     res.status(201).json({ 
       message: 'User registered successfully',
       token_number: tokenNo
