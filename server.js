@@ -38,7 +38,10 @@ app.get('*', (req, res) => {
   const indexPath = fs.existsSync(path.join(distPath, 'index.html'))
     ? path.join(distPath, 'index.html')
     : path.resolve(__dirname, '../frontend', 'dist', 'index.html');
-  res.sendFile(indexPath);
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  res.status(404).json({ error: 'Endpoint not found or frontend not built' });
 });
 
 // Start Server

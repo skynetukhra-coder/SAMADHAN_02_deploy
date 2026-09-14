@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-govBlue-light: #2B589A;
+  --color-govBlue: #0B3366;
+  --color-govBlue-dark: #051D3D;
+  
+  --color-govGold-light: #E2C275;
+  --color-govGold: #B3913B;
+  --color-govGold-dark: #826521;
+  
+  --color-govGray-light: #F8F9FC;
+  --color-govGray: #E9ECF4;
+  --color-govGray-dark: #6E7A8A;
+  
+  --font-outfit: "Outfit", "Inter", sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #f6f8fc;
+  color: #1e293b;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Faded and Blurred Building Watermark Background */
+.watermark-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  /* Overlay a white/blue tint so the text on top is 100% readable */
+  background-image: linear-gradient(
+    rgba(246, 248, 252, 0.82), 
+    rgba(246, 248, 252, 0.82)
+  ), url('./assets/building-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: none; /* Removed blur entirely so it remains sharp and clear */
+  pointer-events: none;
+  z-index: -50;
+}
+
+/* Glassmorphism card effects */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
